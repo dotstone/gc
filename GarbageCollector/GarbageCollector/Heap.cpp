@@ -10,6 +10,11 @@ Heap::Heap() {
 	// Allocate heap
 	heap = malloc(1024 * 32);
 	memset(heap, 0, 1024 * 32);
+
+	// initialize free list with one single free block
+	unsigned short* shortPtr = (unsigned short*) heap;
+	*shortPtr = 1024 * 32;
+	*(shortPtr + 1) = 0;
 }
 
 void* Heap::alloc(std::string className) {
