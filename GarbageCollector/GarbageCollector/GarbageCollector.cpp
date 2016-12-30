@@ -1,11 +1,26 @@
 // GarbageCollector.cpp : main project file.
 
 #include "stdafx.h"
-
-using namespace System;
+#include "Heap.h"
+#include <iostream>
 
 int main(array<System::String ^> ^args)
 {
-    Console::WriteLine(L"Hello World");
+	std::cout << "Initializing ...";
+
+	Heap* heap = new Heap();
+
+	// TODO: Create and register types: StudentList, StudNode, Student, LectNode, Lecture
+	heap->registerType("StudentList", (void*)1);
+
+	// TODO: Create sample instances
+	heap->alloc("StudentList");
+
+	// TODO: Do some action on the students and verify the gc with dump()
+	heap->gc(NULL);
+	heap->dump();
+
+	_sleep(2000);
+	delete heap;
     return 0;
 }
