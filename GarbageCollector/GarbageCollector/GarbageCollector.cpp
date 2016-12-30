@@ -11,7 +11,7 @@ int main(array<System::String ^> ^args)
 	Heap* heap = new Heap();
 
 	// TODO: Create and register types: StudentList, StudNode, Student, LectNode, Lecture
-	heap->registerType("StudentList", (void*)1);
+	heap->registerType("StudentList", (Descriptor*)1);
 
 	// TODO: Create sample instances
 	heap->alloc("StudentList");
