@@ -12,7 +12,8 @@ int main(array<System::String ^> ^args)
 
 	// TODO: Create and register types: StudentList, StudNode, Student, LectNode, Lecture
 	std::map<std::string, int> offsets;
-	Descriptor* descriptor = new Descriptor(16, offsets);
+	// TODO: objsize always multiple of 4?
+	Descriptor* descriptor = new Descriptor(12, offsets);
 	heap->registerType("StudentList", descriptor);
 
 	// TODO: Create sample instances

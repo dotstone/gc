@@ -6,9 +6,9 @@
 #pragma once
 class Heap
 {
-	int* heap;
+	void* const heap = malloc(1024 * 32);
+	void* freelist;
 	std::map<std::string, Descriptor*> typeDescriptors;
-	std::list<void*> freeList;
 
 public:
 	Heap();
