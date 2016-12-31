@@ -23,30 +23,32 @@ void* Heap::alloc(std::string className) {
 		return 0;
 	}
 
-	Descriptor descriptor = *(typeDescriptors[className]);
+	Descriptor* descriptor = (typeDescriptors[className]);
 
 	// TODO: look for an empty slot in freeList (take the first block which fits the object size
 	int* start = heap + 1;
 	int* free = start;
 	int* prev = start;
 
-	while ( *(free - 1) > (descriptor.objsize + 4) && free != heap) {
+	std::cout << "Objsize: " << descriptor->objsize << "\n";
+	
+	while ( *(free - 1) > (descriptor->objsize + 4) && free != heap) {
 		prev = free;
 		free = (int*) (&heap + *free);
 	}
 
-	if (*(free - 1) < (descriptor.objsize + 4)) {
+	if (*(free - 1) < (descriptor->objsize + 4)) {
 		std::cout << "No free block with sufficient size found!";
 		return 0;
 	}
 	else {
 		int* block = free;
-		int newLen = *(free - 1) - (descriptor.objsize + 4);
+		int newLen = *(free - 1) - (descriptor->objsize + 4);
 
 		if (newLen >= 8) {
 			
 		}
-	}
+	} 
 
 	// TODO: set the type descriptor accordingly (type tag + mark bit)
 	// TODO: create an instance according to information in typeDescriptors[className]

@@ -11,7 +11,9 @@ int main(array<System::String ^> ^args)
 	Heap* heap = new Heap();
 
 	// TODO: Create and register types: StudentList, StudNode, Student, LectNode, Lecture
-	heap->registerType("StudentList", (Descriptor*)1);
+	std::map<std::string, int> offsets;
+	Descriptor* descriptor = new Descriptor(16, offsets);
+	heap->registerType("StudentList", descriptor);
 
 	// TODO: Create sample instances
 	heap->alloc("StudentList");
@@ -20,7 +22,7 @@ int main(array<System::String ^> ^args)
 	heap->gc(NULL);
 	heap->dump();
 
-	_sleep(2000);
+	system("pause");
 	delete heap;
     return 0;
 }
