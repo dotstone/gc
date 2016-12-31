@@ -14,7 +14,7 @@ Heap::Heap() {
 	// initialize free list with one single free block
 	int* heapInt = (int*)heap;
 	*heapInt = 1024 * 32;
-	*(heapInt + 1) = 0;
+	*(heapInt + 1) = 1;
 
 	freelist = heapInt + 1;
 }
@@ -32,14 +32,14 @@ void* Heap::alloc(std::string className) {
 	void* prev = freelist;
 	
 	int next = *((int*)freelist);
-	freelist = *(&start + next);
+	freelist = *(&heap + next);
 	int length = *((int*)freelist - 1);
 
 	// iterate through the free list to find a sufficient block
 	while ( length < (descriptor->objsize + 4) && freelist != start) {
 		prev = freelist;
 		next = *((int*)freelist);
-		freelist = *(&start + next);
+		freelist = *(&heap + next);
 		length = *((int*)freelist - 1);
 	}
 
