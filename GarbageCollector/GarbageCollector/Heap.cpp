@@ -43,9 +43,11 @@ void* Heap::alloc(std::string className) {
 		length = *((int*)freelist - 1);
 	}
 
+	char* block = (char*) freelist;
+
 	if (length < (descriptor->objsize + 4)) {
 		std::cout << "No free block with sufficient size found!";
-		return 0;
+		return NULL;
 	}
 	else {
 		char* block = (char*) freelist;
@@ -66,16 +68,20 @@ void* Heap::alloc(std::string className) {
 			*((int*)prev) = *((int*)freelist);
 		}
 		// TODO: set all data bytes in the block to 0
-		// memset(block, 0, *((int*) block - 1));
+		memset(block, 0, descriptor->objsize);
 
 		// set the used bit to 1
 		*((int*)block - 1) = *((int*)block - 1) | 0x80000000;
+
+		// TODO: set the type descriptor accordingly (type tag + mark bit)
+		// set type descriptor
+		Descriptor** typeTag = (Descriptor**)block;
+		*typeTag = &(*descriptor);
 	} 
-	
-	// TODO: set the type descriptor accordingly (type tag + mark bit)
+
 	// TODO: create an instance according to information in typeDescriptors[className]
 	// TODO: return address of the object itself (type tag excluded?)
-	return 0;
+	return (block + 4);
 }
 
 void Heap::registerType(std::string className, Descriptor* typeDescrAddr) {
