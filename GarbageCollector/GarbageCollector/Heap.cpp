@@ -13,9 +13,15 @@ Heap::Heap() {
 	
 	// initialize free list with one single free block
 	int* heapInt = (int*)heap;
-	*heapInt = 1024 * 32;
-	*(heapInt + 1) = 1;
 
+	// setting size of the block
+	*heapInt = 1024 * 32;
+
+	// setting next pointer of block to itself
+	int** next = (int**)(heapInt + 1);
+	*next = (heapInt + 1);
+
+	// freelist points to the first block
 	freelist = heapInt + 1;
 }
 
@@ -31,15 +37,15 @@ void* Heap::alloc(std::string className) {
 	void* start = freelist;
 	void* prev = freelist;
 	
-	int next = *((int*)freelist);
-	freelist = *(&heap + next);
+	int** next = ((int**)freelist);
+	freelist = *next;
 	int length = *((int*)freelist - 1);
 
 	// iterate through the free list to find a sufficient block
 	while ( length < (descriptor->objsize + 4) && freelist != start) {
 		prev = freelist;
-		next = *((int*)freelist);
-		freelist = *(&heap + next);
+		int** next = ((int**)freelist);
+		freelist = *next;
 		length = *((int*)freelist - 1);
 	}
 
@@ -65,7 +71,7 @@ void* Heap::alloc(std::string className) {
 		}
 		else {
 			// remove block from list
-			*((int*)prev) = *((int*)freelist);
+			*((int**)prev) = ((int*)freelist);
 		}
 		// TODO: set all data bytes in the block to 0
 		memset(block, 0, descriptor->objsize);
