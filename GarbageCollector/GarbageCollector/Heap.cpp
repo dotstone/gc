@@ -18,14 +18,16 @@ Heap::Heap() {
 	*heapInt = 1024 * 32;
 
 	// setting next pointer of block to itself
-	int** next = (int**)(heapInt + 1);
-	*next = (heapInt + 1);
+	*(heapInt + 1) = (int) heapInt;
 
 	// freelist points to the first block
-	freelist = heapInt + 1;
+	freelist = heapInt;
 }
 
 void* Heap::alloc(std::string className) {
+	if (freelist == NULL) {
+		std::cout << "No more free blocks!";
+	}
 	if (typeDescriptors.find(className) == typeDescriptors.end()) {
 		std::cout << "Type " << className << " not found!";
 		return 0;
@@ -33,61 +35,60 @@ void* Heap::alloc(std::string className) {
 
 	Descriptor* descriptor = (typeDescriptors[className]);
 
-	// TODO: look for an empty slot in freeList (take the first block which fits the object size
-	void* start = freelist;
-	void* prev = freelist;
-	
-	int** next = ((int**)freelist);
-	freelist = *next;
-	int length = *((int*)freelist - 1);
+	// look for an empty slot in freeList (take the first block which fits the object size
+	int* start = freelist;
+	int* prev = NULL;
+	int* cur = freelist;
 
-	// iterate through the free list to find a sufficient block
-	while ( length < (descriptor->objsize + 4) && freelist != start) {
-		prev = freelist;
-		int** next = ((int**)freelist);
-		freelist = *next;
-		length = *((int*)freelist - 1);
+	// iterate through the free list to find a sufficiently large block
+	int length = *cur;
+	while (length < (descriptor->objsize + 8)) {
+		prev = cur;
+		cur = (int*)*(cur + 1);
+		length = *cur;
+
+		if (cur == start) {
+			std::cout << "No free block with sufficient size found!";
+			return NULL;
+		}
 	}
 
-	char* block = (char*) freelist;
+	int* block = cur;
+	int newLen = length - (descriptor->objsize + 8);
 
-	if (length < (descriptor->objsize + 4)) {
-		std::cout << "No free block with sufficient size found!";
-		return NULL;
+	if (newLen >= 8) {
+		// split block
+		block += (length - (descriptor->objsize + 8)) / 4;
+		*block = (descriptor->objsize + 8);
+		*cur = newLen;
+	}
+	else if ( *(cur+1) == ((int)cur)+1) {
+		// last free block
+		freelist = NULL;
 	}
 	else {
-		char* block = (char*) freelist;
-		int newLen = length - (descriptor->objsize + 4);
-
-		if (newLen >= 8) {
-			// split block
-			block = block - 4 + length - descriptor->objsize;
-			*((int*)block - 1) = (descriptor->objsize + 4);
-			*((int*) freelist - 1) = newLen;
+		if (prev == NULL) {
+			// First free block
+			freelist = (int*) *(cur + 1);
+			// Iterate over the whole freelist to find the last free block
+			while (*(prev+1) != (int) freelist) {
+				prev = (int*) *(prev + 1);
+			}
 		}
-		else if (freelist == prev) {
-			// last free block
-			freelist = NULL;
-		}
-		else {
-			// remove block from list
-			*((int**)prev) = ((int*)freelist);
-		}
-		// TODO: set all data bytes in the block to 0
-		memset(block, 0, descriptor->objsize);
+		// remove block from list
+		*(prev + 1) = *(cur + 1);
+	}
+	// set all data bytes in the block to 0
+	memset(block + 1, 0, descriptor->objsize + 4);
 
-		// set the used bit to 1
-		*((int*)block - 1) = *((int*)block - 1) | 0x80000000;
+	// set the used bit to 1
+	*block = *block | 0x80000000;
 
-		// TODO: set the type descriptor accordingly (type tag + mark bit)
-		// set type descriptor
-		Descriptor** typeTag = (Descriptor**)block;
-		*typeTag = &(*descriptor);
-	} 
+	// set type descriptor (mark bit = 0)
+	*(block + 1) = (int) descriptor;
 
-	// TODO: create an instance according to information in typeDescriptors[className]
-	// TODO: return address of the object itself (type tag excluded?)
-	return (block + 4);
+	// return address of the object itself (size and type tag excluded)
+	return block + 2;
 }
 
 void Heap::registerType(std::string className, Descriptor* typeDescrAddr) {
@@ -101,32 +102,39 @@ void Heap::gc(void* roots) {
 void Heap::dump() {
 	int* heapInt = (int*)heap;
 
-	std::cout << "\n" << "Used blocks: ";
-	int blockAddr = 0;
-	do {
-		if (*(heapInt + blockAddr) & 0x80000000 != 0) {
-			int size = *(heapInt + blockAddr) & 0x7FFFFFFF;
-			std::string type = "Some Type";
-			std::string hex = "0xBADEAFFE";
-			std::cout << "\n\tAddress: " << (heapInt + blockAddr) << " (" << blockAddr << ")";
-			std::cout << "\n\t\tSize: " << size;
-			std::cout << "\n\t\tType: " << type;
-			std::cout << "\n\t\tDump: " << hex;
-			std::cout << "\n\t\tPointers:";
+	std::cout << std::endl << std::endl << "Used blocks: ";
+	int* blockAddr = (int*) heap;
+	void* startFreeList;
+	int totalSize;
+	// Iterate over all blocks, filter used blocks
+	for (int* blockAddr = (int*)heap; (int)blockAddr < (int)heap + 32 * 1024; blockAddr += totalSize / 4) {
+		totalSize = *blockAddr & 0x7FFFFFFF;
+		int size = totalSize - 8;
+		if ( (*blockAddr & 0x80000000) != 0) {
+			Descriptor* descriptor = (Descriptor*) *(blockAddr + 1);
+			std::string type = descriptor->name;
+			std::cout << std::endl << "\tAddress: 0x" << std::hex << std::uppercase << blockAddr << std::dec;
+			std::cout << std::endl << "\t\tSize: " << size;
+			std::cout << std::endl << "\t\tType: " << type;
+			std::cout << std::endl << "\t\tDump: 0x" << std::hex << std::uppercase << *(blockAddr + 2) << std::dec;
+			std::cout << std::endl << "\t\tPointers:";
 		}
+	}
 
-		blockAddr = *(heapInt + blockAddr + 1);
-	} while (blockAddr > 0);
-
-	std::cout << "\n\n" << "Free blocks: ";
-	blockAddr = 0;
-	do {
-		if ((*(heapInt + blockAddr) & 0x80000000) == 0) {
-			int size = *(heapInt + blockAddr) & 0x7FFFFFFF;
-			std::cout << "\tIndex: " << blockAddr << " (" << size << ")";
-		}
-		blockAddr = *(heapInt + blockAddr + 1);
-	} while (blockAddr > 0);
+	std::cout << std::endl << std::endl << "Free blocks: ";
+	// Iterate over freelist
+	if (freelist == NULL) {
+		std::cout << "No free blocks!";
+	}
+	else {
+		int* blockAddr = freelist;
+		do {
+			int size = *blockAddr;
+			std::cout << "\tIndex: 0x" << blockAddr << " (" << size << ")" << std::endl;
+			blockAddr = (int*) *(blockAddr + 1);
+		} while (blockAddr != freelist);
+	}
+	std::cout << std::endl;
 }
 
 Heap::~Heap() {

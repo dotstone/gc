@@ -14,34 +14,35 @@ int main(array<System::String ^> ^args)
 	std::map<std::string, int> offsets;
 	offsets["first"] = 0;
 	// TODO: objsize always multiple of 4?
-	Descriptor* descriptor = new Descriptor(8, offsets);
+	Descriptor* descriptor = new Descriptor("StudentList", 8, offsets);
 	heap->registerType("StudentList", descriptor);
 
 	offsets.clear();
 	offsets["next"] = 0;
 	offsets["stud"] = 4;
-	descriptor = new Descriptor(12, offsets);
+	descriptor = new Descriptor("StudentNode", 12, offsets);
 	heap->registerType("StudentNode", descriptor);
 
 	offsets.clear();
 	offsets["name"] = 4;
 	offsets["lect"] = 8;
-	descriptor = new Descriptor(16, offsets);
+	descriptor = new Descriptor("Student", 16, offsets);
 	heap->registerType("Student", descriptor);
 
 	offsets.clear();
 	offsets["next"] = 0;
 	offsets["lect"] = 4;
-	descriptor = new Descriptor(12, offsets);
+	descriptor = new Descriptor("LectNode", 12, offsets);
 	heap->registerType("LectNode", descriptor);
 
 	offsets.clear();
 	offsets["name"] = 4;
-	descriptor = new Descriptor(16, offsets);
+	descriptor = new Descriptor("Lecture", 16, offsets);
 	heap->registerType("Lecture", descriptor);
 
 	// TODO: Create sample instances
-	void* lecture = heap->alloc("Lecture");
+	int* lecture = (int*) heap->alloc("Lecture");
+	*lecture = 0xBADEAFFE;
 
 	// TODO: Do some action on the students and verify the gc with dump()
 	heap->gc(NULL);

@@ -7,7 +7,7 @@
 class Heap
 {
 	void* const heap = malloc(1024 * 32);
-	void* freelist;
+	int* freelist;
 	std::map<std::string, Descriptor*> typeDescriptors;
 
 public:
