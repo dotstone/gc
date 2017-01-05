@@ -6,6 +6,7 @@
 #include <iostream>
 
 using namespace System;
+using namespace std;
 
 Heap::Heap() {
 	// initialize heap
@@ -24,12 +25,12 @@ Heap::Heap() {
 	freelist = heapInt;
 }
 
-void* Heap::alloc(std::string className) {
+void* Heap::alloc(string className) {
 	if (freelist == NULL) {
-		std::cout << "No more free blocks!";
+		cout << "No more free blocks!";
 	}
 	if (typeDescriptors.find(className) == typeDescriptors.end()) {
-		std::cout << "Type " << className << " not found!";
+		cout << "Type " << className << " not found!";
 		return 0;
 	}
 
@@ -48,7 +49,7 @@ void* Heap::alloc(std::string className) {
 		length = *cur;
 
 		if (cur == start) {
-			std::cout << "No free block with sufficient size found!";
+			cout << "No free block with sufficient size found!";
 			return NULL;
 		}
 	}
@@ -91,7 +92,7 @@ void* Heap::alloc(std::string className) {
 	return block + 2;
 }
 
-void Heap::registerType(std::string className, Descriptor* typeDescrAddr) {
+void Heap::registerType(string className, Descriptor* typeDescrAddr) {
 	typeDescriptors[className] = typeDescrAddr;
 }
 
@@ -102,7 +103,7 @@ void Heap::gc(void* roots) {
 void Heap::dump() {
 	int* heapInt = (int*)heap;
 
-	std::cout << std::endl << std::endl << "Used blocks: ";
+	cout << endl << endl << "Used blocks: ";
 	int* blockAddr = (int*) heap;
 	void* startFreeList;
 	int totalSize;
@@ -112,29 +113,34 @@ void Heap::dump() {
 		int size = totalSize - 8;
 		if ( (*blockAddr & 0x80000000) != 0) {
 			Descriptor* descriptor = (Descriptor*) *(blockAddr + 1);
-			std::string type = descriptor->name;
-			std::cout << std::endl << "\tAddress: 0x" << std::hex << std::uppercase << blockAddr << std::dec;
-			std::cout << std::endl << "\t\tSize: " << size;
-			std::cout << std::endl << "\t\tType: " << type;
-			std::cout << std::endl << "\t\tDump: 0x" << std::hex << std::uppercase << *(blockAddr + 2) << std::dec;
-			std::cout << std::endl << "\t\tPointers:";
+			string type = descriptor->name;
+			cout << endl << "\tAddress: 0x" << hex << uppercase << blockAddr+2 << dec;
+			cout << endl << "\t\tSize: " << size;
+			cout << endl << "\t\tType: " << type;
+			cout << endl << "\t\tDump: 0x" << hex << uppercase << *(blockAddr + 2) << dec;
+			cout << endl << "\t\tPointers:";
+			
+			for (auto iter : descriptor->pointerOffsets) {
+				int* address = blockAddr + 2 + (iter.second / 4);
+				cout << endl << "\t\t\t" << iter.first << " = 0x" << hex << uppercase << address << " (0x" << *address << ")" << dec;
+			}
 		}
 	}
 
-	std::cout << std::endl << std::endl << "Free blocks: ";
+	cout << endl << endl << "Free blocks: ";
 	// Iterate over freelist
 	if (freelist == NULL) {
-		std::cout << "No free blocks!";
+		cout << "No free blocks!";
 	}
 	else {
 		int* blockAddr = freelist;
 		do {
 			int size = *blockAddr;
-			std::cout << "\tIndex: 0x" << blockAddr << " (" << size << ")" << std::endl;
+			cout << "\tIndex: 0x" << blockAddr << " (" << size << ")" << endl;
 			blockAddr = (int*) *(blockAddr + 1);
 		} while (blockAddr != freelist);
 	}
-	std::cout << std::endl;
+	cout << endl;
 }
 
 Heap::~Heap() {
