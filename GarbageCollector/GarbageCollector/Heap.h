@@ -10,12 +10,17 @@ class Heap
 	int* freelist;
 	std::map<std::string, Descriptor*> typeDescriptors;
 
+	bool isInHeap(int* address);
+
+	void mark(int* root);
+	void sweep();
+
 public:
 	Heap();
 	~Heap();
 	void* alloc(std::string className);
 	void registerType(std::string className, Descriptor* typeDescrAddr);
-	void gc(void* roots);
+	void gc(void* root);
 	void dump();
 };
 
