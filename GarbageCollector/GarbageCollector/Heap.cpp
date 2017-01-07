@@ -1,12 +1,14 @@
 #include "stdafx.h"
 #include "Heap.h"
-#include "Descriptor.h"
 #include <list>
 #include <string>
 #include <iostream>
 
 using namespace System;
 using namespace std;
+
+int* tag2Address(int tag);
+int tag(int* block);
 
 Heap::Heap() {
 	// initialize heap
@@ -34,7 +36,7 @@ void* Heap::alloc(string className) {
 		return 0;
 	}
 
-	Descriptor* descriptor = (typeDescriptors[className]);
+	int* descriptor = (typeDescriptors[className]);
 
 	// look for an empty slot in freeList (take the first block which fits the object size
 	int* start = freelist;
@@ -43,7 +45,7 @@ void* Heap::alloc(string className) {
 
 	// iterate through the free list to find a sufficiently large block
 	int length = *cur;
-	while (length < (descriptor->objsize + 8)) {
+	while (length < (*descriptor + 8)) {
 		prev = cur;
 		cur = (int*)*(cur + 1);
 		length = *cur;
@@ -55,12 +57,12 @@ void* Heap::alloc(string className) {
 	}
 
 	int* block = cur;
-	int newLen = length - (descriptor->objsize + 12);
+	int newLen = length - (*descriptor + 8);
 
 	if (newLen >= 12) {
 		// split block
-		block += (length - (descriptor->objsize + 12)) / 4;
-		*block = (descriptor->objsize + 12);
+		block += (length - (*descriptor + 8)) / 4;
+		*block = (*descriptor + 8);
 		*cur = newLen;
 	}
 	else if ( *(cur+1) == ((int)cur)+1) {
@@ -80,7 +82,7 @@ void* Heap::alloc(string className) {
 		*(prev + 1) = *(cur + 1);
 	}
 	// set all data bytes in the block to 0
-	memset(block + 1, 0, descriptor->objsize + 8);
+	memset(block + 1, 0, *descriptor + 4);
 
 	// set the used bit to 1
 	*block = *block | 0x80000000;
@@ -89,10 +91,10 @@ void* Heap::alloc(string className) {
 	*(block + 1) = (int) descriptor;
 
 	// return address of the object itself (size and type tag excluded)
-	return block + 3;
+	return block + 2;
 }
 
-void Heap::registerType(string className, Descriptor* typeDescrAddr) {
+void Heap::registerType(string className, int* typeDescrAddr) {
 	typeDescriptors[className] = typeDescrAddr;
 }
 
@@ -102,7 +104,7 @@ void Heap::gc(void* root) {
 }
 
 void Heap::mark(int* root) {
-	int* cur = (int*)root - 3;
+	int* cur = (int*)root - 2;
 	int* prev = NULL;
 
 	if (cur == NULL) {
@@ -110,23 +112,20 @@ void Heap::mark(int* root) {
 	}
 
 	while (true) {
-		*(cur + 2) += 1;	// mark
+		// Mark
+		*(cur + 1) |= 1;		// Mark flag
+		*(cur + 1) += 4;		// increment cur.i
 
-		int curi = *(cur + 2);
-		Descriptor* descriptor = (Descriptor*)*(cur + 1);
-		int curn = descriptor->pointerOffsets.size();
+		int* descrAddr = tag2Address(tag(cur));
 
-		cout << "Mark " << descriptor->name << endl;
+		cout << "Mark " << endl;
 
-		if (curi <= curn) {
+		if (*descrAddr >= 0) {
 			// advance
-			map<string, int>::iterator iterator(descriptor->pointerOffsets.begin());
-			advance(iterator, curi - 1);
-			int* pAddr = cur + 3 + (iterator->second / 4);
-			int* p = ((int*)*pAddr) - 3;
+			int* pAddr = cur + 2 + *descrAddr;
+			int* p = ((int*)*pAddr) - 2;
 			if (isInHeap(p)) {
-				int pi = *(p + 2);
-				if (pi <= 0) {
+				if (*(p + 1) >= 0) {
 					*pAddr = (int)prev;
 					prev = cur;
 					cur = p;
@@ -143,16 +142,22 @@ void Heap::mark(int* root) {
 			int* p = cur;
 			cur = prev;
 
-			descriptor = (Descriptor*)*(cur + 1);
-			map<string, int>::iterator iterator(descriptor->pointerOffsets.begin());
-			advance(iterator, *(cur + 2) - 1);
-			int* prevAddr = cur + 3 + (iterator->second / 4);
+			descrAddr = tag2Address(tag(cur));
+			int* prevAddr = cur + 2 + (*descrAddr / 4);
 			prev = (int*)*prevAddr;
-			*prevAddr = (int)p + 3;
+			*prevAddr = (int)p + 2;
 
 			cout << "Retreat" << endl;
 		}
 	}
+}
+
+int tag(int* block) {
+	return *(block + 1);
+}
+
+int* tag2Address(int tag) {
+	return (int*)(tag & 0xFFFFFFFC);
 }
 
 void Heap::sweep() {
@@ -175,17 +180,17 @@ void Heap::dump() {
 		totalSize = *blockAddr & 0x7FFFFFFF;
 		int size = totalSize - 8;
 		if ( (*blockAddr & 0x80000000) != 0) {
-			Descriptor* descriptor = (Descriptor*) *(blockAddr + 1);
-			string type = descriptor->name;
+			int* descriptor = (int*) (*(blockAddr + 1) & 0xFFFFFFFC);
+			string type = "Some Type";
 			cout << endl << "\tAddress: 0x" << hex << uppercase << blockAddr+2 << dec;
 			cout << endl << "\t\tSize: " << size;
 			cout << endl << "\t\tType: " << type;
-			cout << endl << "\t\tDump: 0x" << hex << uppercase << *(blockAddr + 3) << dec;
+			cout << endl << "\t\tDump: 0x" << hex << uppercase << *(blockAddr + 2) << dec;
 			cout << endl << "\t\tPointers:";
 			
-			for (auto iter : descriptor->pointerOffsets) {
-				int* address = blockAddr + 3 + (iter.second / 4);
-				cout << endl << "\t\t\t" << iter.first << " = 0x" << hex << uppercase << address << " (0x" << *address << ")" << dec;
+			for (int i = 0; i < *descriptor / 4; i++) {
+				int* address = blockAddr + 2 + (*(descriptor+i) / 4);
+				cout << endl << "\t\t\t" << "0x" << hex << uppercase << address << " (0x" << *address << ")" << dec;
 			}
 		}
 	}

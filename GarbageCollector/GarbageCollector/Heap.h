@@ -8,7 +8,7 @@ class Heap
 {
 	void* const heap = malloc(1024 * 32);
 	int* freelist;
-	std::map<std::string, Descriptor*> typeDescriptors;
+	std::map<std::string, int*> typeDescriptors;
 
 	bool isInHeap(int* address);
 
@@ -19,7 +19,7 @@ public:
 	Heap();
 	~Heap();
 	void* alloc(std::string className);
-	void registerType(std::string className, Descriptor* typeDescrAddr);
+	void registerType(std::string className, int* typeDescrAddr);
 	void gc(void* root);
 	void dump();
 };

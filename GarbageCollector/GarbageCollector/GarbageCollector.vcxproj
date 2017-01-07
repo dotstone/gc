@@ -81,7 +81,6 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Descriptor.h" />
     <ClInclude Include="Heap.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -91,7 +90,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp" />
-    <ClCompile Include="Descriptor.cpp" />
     <ClCompile Include="GarbageCollector.cpp" />
     <ClCompile Include="Heap.cpp" />
     <ClCompile Include="stdafx.cpp">

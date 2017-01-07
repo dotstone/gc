@@ -27,9 +27,6 @@
     <ClInclude Include="Heap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Descriptor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc">
@@ -47,9 +44,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Heap.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Descriptor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

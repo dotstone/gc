@@ -43,36 +43,41 @@ int main(array<System::String ^> ^args)
 }
 
 void createTypeDescriptors(Heap* heap) {
-	map<string, int> offsets;
-	offsets["first"] = 0;
-	Descriptor* descriptor = new Descriptor("StudentList", 4, offsets);
-	heap->registerType("StudentList", descriptor);
+	int* studentlist = (int*) malloc(4 + 4 + 4);
+	*studentlist = 12;
+	*(studentlist + 1) = 0;
+	*(studentlist + 2) = -8;
+	heap->registerType("StudentList", studentlist);
 
-	offsets = map<string, int>();
-	offsets["next"] = 0;
-	offsets["stud"] = 4;
-	descriptor = new Descriptor("StudNode", 8, offsets);
-	heap->registerType("StudNode", descriptor);
+	int* studnode = (int*)malloc(4 + 8 + 4);
+	*studnode = 16;
+	*(studnode + 1) = 0;
+	*(studnode + 2) = 4;
+	*(studnode + 3) = -12;
+	heap->registerType("StudNode", studnode);
 
-	offsets = map<string, int>();
-	offsets["id"] = 0;
-	offsets["name"] = 4;
-	offsets["lect"] = 36;
-	descriptor = new Descriptor("Student", 40, offsets);
-	heap->registerType("Student", descriptor);
+	int* student = (int*)malloc(4 + 12 + 4);
+	*student = 20;
+	*(student + 1) = 0;
+	*(student + 2) = 4;
+	*(student + 3) = 36;
+	*(student + 4) = -16;
+	heap->registerType("Student", student);
 
-	offsets = map<string, int>();
-	offsets["next"] = 0;
-	offsets["lect"] = 4;
-	descriptor = new Descriptor("LectNode", 8, offsets);
-	heap->registerType("LectNode", descriptor);
+	int* lectnode = (int*)malloc(4 + 8 + 4);
+	*lectnode = 16;
+	*(lectnode + 1) = 0;
+	*(lectnode + 2) = 4;
+	*(lectnode + 3) = -12;
+	heap->registerType("LectNode", lectnode);
 
-	offsets = map<string, int>();
-	offsets["id"] = 0;
-	offsets["name"] = 4;
-	offsets["semester"] = 36;
-	descriptor = new Descriptor("Lecture", 40, offsets);
-	heap->registerType("Lecture", descriptor);
+	int* lecture = (int*)malloc(4 + 12 + 4);
+	*lecture = 20;
+	*(lecture + 1) = 0;
+	*(lecture + 2) = 4;
+	*(lecture + 3) = 36;
+	*(lecture + 4) = -16;
+	heap->registerType("Lecture", lecture);
 }
 
 void* createLecture(Heap* heap, int id, char* name, int semester) {
