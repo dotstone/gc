@@ -34,6 +34,7 @@ int main(array<System::String ^> ^args)
 	void* studentList = createStudentList(heap, gabrielNode);
 
 	// TODO: Do some action on the students and verify the gc with dump()
+	heap->dump();
 	heap->gc(studentList);
 	heap->dump();
 
@@ -57,7 +58,7 @@ void createTypeDescriptors(Heap* heap) {
 	heap->registerType("StudNode", studnode);
 
 	int* student = (int*)malloc(4 + 12 + 4);
-	*student = 20;
+	*student = 48;
 	*(student + 1) = 0;
 	*(student + 2) = 4;
 	*(student + 3) = 36;
@@ -72,7 +73,7 @@ void createTypeDescriptors(Heap* heap) {
 	heap->registerType("LectNode", lectnode);
 
 	int* lecture = (int*)malloc(4 + 12 + 4);
-	*lecture = 20;
+	*lecture = 48;
 	*(lecture + 1) = 0;
 	*(lecture + 2) = 4;
 	*(lecture + 3) = 36;

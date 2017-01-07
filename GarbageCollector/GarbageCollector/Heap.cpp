@@ -8,7 +8,19 @@ using namespace System;
 using namespace std;
 
 int* tag2Address(int tag);
+bool isMarked(int tag);
 int tag(int* block);
+int objSizeOfDescriptor(int* descriptor);
+
+/* Block Layout
+Used Block:
+Bytes 0-3: 0x80000000 + blocksize
+Bytes 4-7: descriptorAddr + marked (0/1)
+
+Free Block:
+Bytes 0-3: blocksize
+Bytes 4-7: next pointer
+*/
 
 Heap::Heap() {
 	// initialize heap
@@ -37,6 +49,7 @@ void* Heap::alloc(string className) {
 	}
 
 	int* descriptor = (typeDescriptors[className]);
+	int requiredSize = objSizeOfDescriptor(descriptor);
 
 	// look for an empty slot in freeList (take the first block which fits the object size
 	int* start = freelist;
@@ -45,7 +58,7 @@ void* Heap::alloc(string className) {
 
 	// iterate through the free list to find a sufficiently large block
 	int length = *cur;
-	while (length < (*descriptor + 8)) {
+	while (length < requiredSize) {
 		prev = cur;
 		cur = (int*)*(cur + 1);
 		length = *cur;
@@ -57,15 +70,15 @@ void* Heap::alloc(string className) {
 	}
 
 	int* block = cur;
-	int newLen = length - (*descriptor + 8);
+	int newLen = length - requiredSize;
 
-	if (newLen >= 12) {
+	if (newLen >= 8) {
 		// split block
-		block += (length - (*descriptor + 8)) / 4;
-		*block = (*descriptor + 8);
+		block += (length - requiredSize) / 4;
+		*block = requiredSize;
 		*cur = newLen;
 	}
-	else if ( *(cur+1) == ((int)cur)+1) {
+	else if ( *(cur+1) == (int)cur) {
 		// last free block
 		freelist = NULL;
 	}
@@ -82,10 +95,10 @@ void* Heap::alloc(string className) {
 		*(prev + 1) = *(cur + 1);
 	}
 	// set all data bytes in the block to 0
-	memset(block + 1, 0, *descriptor + 4);
+	memset(block + 2, 0, *block - 8);
 
 	// set the used bit to 1
-	*block = *block | 0x80000000;
+	*block |= 0x80000000;
 
 	// set type descriptor (mark bit = 0)
 	*(block + 1) = (int) descriptor;
@@ -122,20 +135,28 @@ void Heap::mark(int* root) {
 
 		if (*descrAddr >= 0) {
 			// advance
-			int* pAddr = cur + 2 + *descrAddr;
+			int* pAddr = cur + 2 + (*descrAddr / 4);
 			int* p = ((int*)*pAddr) - 2;
 			if (isInHeap(p)) {
-				if (*(p + 1) >= 0) {
+				if (!isMarked(tag(p))) {
 					*pAddr = (int)prev;
 					prev = cur;
 					cur = p;
 				}
+				else {
+					cout << " Already marked" << endl;
+				}
 			}
-
 			cout << "Advance" << endl;
 		}
 		else {
 			// retreat
+			// reset descriptor address
+			cout << "Decreasing tag address by " << *(tag2Address(tag(cur))) << endl;
+			cout << *(cur + 1);
+			*(cur + 1) = *(cur + 1) + *(tag2Address(tag(cur)));
+			cout << " to " << *(cur + 1);
+
 			if (prev == NULL) {
 				return;
 			}
@@ -160,6 +181,18 @@ int* tag2Address(int tag) {
 	return (int*)(tag & 0xFFFFFFFC);
 }
 
+bool isMarked(int tag) {
+	return tag & 1 > 0;
+}
+
+int sizeOfBlock(int* block) {
+	return *tag2Address(tag(block));
+}
+
+int objSizeOfDescriptor(int* descriptor) {
+	return *descriptor;
+}
+
 void Heap::sweep() {
 
 }
@@ -180,15 +213,21 @@ void Heap::dump() {
 		totalSize = *blockAddr & 0x7FFFFFFF;
 		int size = totalSize - 8;
 		if ( (*blockAddr & 0x80000000) != 0) {
-			int* descriptor = (int*) (*(blockAddr + 1) & 0xFFFFFFFC);
+			int* descriptor = tag2Address(tag(blockAddr));
 			string type = "Some Type";
 			cout << endl << "\tAddress: 0x" << hex << uppercase << blockAddr+2 << dec;
+			if (isMarked(tag(blockAddr))) {
+				cout << endl << "\t\t" << "MARKED";
+			}
+			else {
+				cout << endl << "\t\t" << "NO MARK";
+			}
 			cout << endl << "\t\tSize: " << size;
 			cout << endl << "\t\tType: " << type;
 			cout << endl << "\t\tDump: 0x" << hex << uppercase << *(blockAddr + 2) << dec;
 			cout << endl << "\t\tPointers:";
 			
-			for (int i = 0; i < *descriptor / 4; i++) {
+			for (int i = 1; *(descriptor + i) >= 0; i++) {
 				int* address = blockAddr + 2 + (*(descriptor+i) / 4);
 				cout << endl << "\t\t\t" << "0x" << hex << uppercase << address << " (0x" << *address << ")" << dec;
 			}
