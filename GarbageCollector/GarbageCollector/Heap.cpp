@@ -240,9 +240,15 @@ void Heap::dump() {
 		int size = totalSize - 8;
 		if (isUsed(blockAddr)) {
 			int* descriptor = tag2Address(tag(blockAddr));
+			string type = "Type not found";
+			for (auto iter : typeDescriptors) {
+				if (iter.second == descriptor) {
+					type = iter.first;
+				}
+			}
 			cout << endl << "\tAddress: 0x" << hex << uppercase << blockAddr+2 << dec;
 			cout << endl << "\t\tSize: " << size;
-			cout << endl << "\t\tDescriptor Address: 0x" << descriptor;
+			cout << endl << "\t\tType: " << type;
 			cout << endl << "\t\tDump: 0x" << hex << uppercase << *(blockAddr + 2) << dec;
 			cout << endl << "\t\tPointers:";
 			
@@ -262,7 +268,11 @@ void Heap::dump() {
 		int* blockAddr = freelist;
 		do {
 			int size = *blockAddr;
-			cout << "\tIndex: 0x" << blockAddr << " (" << size << " bytes)" << endl;
+			int offset = (int)blockAddr - (int)heap;
+			if (offset >= 16 * 1024) {
+				offset -= 32 * 1024;
+			}
+			cout << "\tIndex: 0x" << blockAddr << " (Offset: " << offset << ")" << ": " << size << " bytes" << endl;
 			blockAddr = (int*) *(blockAddr + 1);
 		} while (blockAddr != freelist && blockAddr != NULL);
 	}
