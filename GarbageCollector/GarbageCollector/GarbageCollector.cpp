@@ -27,15 +27,33 @@ int main(array<System::String ^> ^args)
 	void* syssoftNode = createLectureNode(heap, NULL, syssoft);
 	void* compilerNode = createLectureNode(heap, syssoftNode, compiler);
 
-	void* gabriel = createStudent(heap, 1, "Gabriel Schoerghuber", compilerNode);
+	void* dominik = createStudent(heap, 2, "Dominik Steinbinder", compilerNode);
+	void* dominikNode = createStudentNode(heap, NULL, dominik);
 
-	void* gabrielNode = createStudentNode(heap, NULL, gabriel);
+	void* gabriel = createStudent(heap, 1, "Gabriel Schoerghuber", compilerNode);
+	void* gabrielNode = createStudentNode(heap, dominikNode, gabriel);
 
 	void* studentList = createStudentList(heap, gabrielNode);
 
-	// TODO: Do some action on the students and verify the gc with dump()
 	heap->dump();
+	cout << endl << "Removing Dominik node from Student List" << endl << endl;
+	*(int*)gabrielNode = NULL;
+	system("pause");
+	cout << endl;
+	heap->gc(studentList);	
+	heap->dump();
+
+	cout << endl << "Removing Gabriel node from Student List" << endl << endl;
+	*(int*)studentList = NULL;
+	system("pause");
+	cout << endl;
 	heap->gc(studentList);
+	heap->dump();
+
+	cout << endl << "Deleting StudentList" << endl << endl;
+	system("pause");
+	cout << endl;
+	heap->gc(NULL);
 	heap->dump();
 
 	system("pause");

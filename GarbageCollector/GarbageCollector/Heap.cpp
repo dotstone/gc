@@ -7,6 +7,7 @@
 using namespace System;
 using namespace std;
 
+bool isUsed(int* block);
 int* tag2Address(int tag);
 bool isMarked(int tag);
 int tag(int* block);
@@ -112,7 +113,9 @@ void Heap::registerType(string className, int* typeDescrAddr) {
 }
 
 void Heap::gc(void* root) {
-	mark((int*)root);
+	if (root != NULL) {
+		mark((int*)root);
+	}
 	sweep();
 }
 
@@ -131,31 +134,24 @@ void Heap::mark(int* root) {
 
 		int* descrAddr = tag2Address(tag(cur));
 
-		cout << "Mark " << endl;
-
 		if (*descrAddr >= 0) {
 			// advance
+			// check if the field holds a pointer that's inside the heap
 			int* pAddr = cur + 2 + (*descrAddr / 4);
 			int* p = ((int*)*pAddr) - 2;
 			if (isInHeap(p)) {
 				if (!isMarked(tag(p))) {
+					// Set the prev and dig in (DSW)
 					*pAddr = (int)prev;
 					prev = cur;
 					cur = p;
 				}
-				else {
-					cout << " Already marked" << endl;
-				}
 			}
-			cout << "Advance" << endl;
 		}
 		else {
 			// retreat
-			// reset descriptor address
-			cout << "Decreasing tag address by " << *(tag2Address(tag(cur))) << endl;
-			cout << *(cur + 1);
+			// we reached the end of the descriptor fields -> reset descriptor address
 			*(cur + 1) = *(cur + 1) + *(tag2Address(tag(cur)));
-			cout << " to " << *(cur + 1);
 
 			if (prev == NULL) {
 				return;
@@ -163,14 +159,17 @@ void Heap::mark(int* root) {
 			int* p = cur;
 			cur = prev;
 
+			// reset pointer fields (DSW)
 			descrAddr = tag2Address(tag(cur));
 			int* prevAddr = cur + 2 + (*descrAddr / 4);
 			prev = (int*)*prevAddr;
 			*prevAddr = (int)p + 2;
-
-			cout << "Retreat" << endl;
 		}
 	}
+}
+
+bool isUsed(int* block) {
+	return (*block & 0x80000000) > 0;
 }
 
 int tag(int* block) {
@@ -186,7 +185,7 @@ bool isMarked(int tag) {
 }
 
 int sizeOfBlock(int* block) {
-	return *tag2Address(tag(block));
+	return *block & 0x7FFFFFFF;
 }
 
 int objSizeOfDescriptor(int* descriptor) {
@@ -194,7 +193,34 @@ int objSizeOfDescriptor(int* descriptor) {
 }
 
 void Heap::sweep() {
+	int blockSize;
+	int* free = NULL;
+	for (int* blockAddr = (int*)heap; (int)blockAddr < (int)heap + 32 * 1024; blockAddr += blockSize / 4) {
+		blockSize = sizeOfBlock(blockAddr);
 
+		if (isMarked(tag(blockAddr))) {
+			// Unset the marked bit
+			*(blockAddr + 1) &= 0xFFFFFFFE;
+		}
+		else {
+			// collect
+			// Iterate through the heap until we find a block that's used and marked
+			int* q = blockAddr + (blockSize / 4);
+			int size = blockSize;
+			while (q < (int*)heap + 8 * 1024 && (!isUsed(q) || !isMarked(tag(q)))) {
+				size += sizeOfBlock(q);
+				q = q + (sizeOfBlock(q) / 4);
+			}
+			// Merge blocks
+			*blockAddr = size;
+			blockSize = size;
+			*(blockAddr + 1) = (int)free;
+			free = blockAddr;
+
+			// Freelist gets set to the last free block
+			freelist = blockAddr;
+		}
+	}
 }
 
 bool Heap::isInHeap(int* address) {
@@ -204,26 +230,19 @@ bool Heap::isInHeap(int* address) {
 void Heap::dump() {
 	int* heapInt = (int*)heap;
 
-	cout << endl << endl << "Used blocks: ";
+	cout << "Used blocks: " << endl;
 	int* blockAddr = (int*) heap;
 	void* startFreeList;
 	int totalSize;
 	// Iterate over all blocks, filter used blocks
 	for (int* blockAddr = (int*)heap; (int)blockAddr < (int)heap + 32 * 1024; blockAddr += totalSize / 4) {
-		totalSize = *blockAddr & 0x7FFFFFFF;
+		totalSize = sizeOfBlock(blockAddr);
 		int size = totalSize - 8;
-		if ( (*blockAddr & 0x80000000) != 0) {
+		if (isUsed(blockAddr)) {
 			int* descriptor = tag2Address(tag(blockAddr));
-			string type = "Some Type";
 			cout << endl << "\tAddress: 0x" << hex << uppercase << blockAddr+2 << dec;
-			if (isMarked(tag(blockAddr))) {
-				cout << endl << "\t\t" << "MARKED";
-			}
-			else {
-				cout << endl << "\t\t" << "NO MARK";
-			}
 			cout << endl << "\t\tSize: " << size;
-			cout << endl << "\t\tType: " << type;
+			cout << endl << "\t\tDescriptor Address: 0x" << descriptor;
 			cout << endl << "\t\tDump: 0x" << hex << uppercase << *(blockAddr + 2) << dec;
 			cout << endl << "\t\tPointers:";
 			
@@ -234,7 +253,7 @@ void Heap::dump() {
 		}
 	}
 
-	cout << endl << endl << "Free blocks: ";
+	cout << endl << endl << "Free blocks: " << endl;
 	// Iterate over freelist
 	if (freelist == NULL) {
 		cout << "No free blocks!";
@@ -243,9 +262,9 @@ void Heap::dump() {
 		int* blockAddr = freelist;
 		do {
 			int size = *blockAddr;
-			cout << "\tIndex: 0x" << blockAddr << " (" << size << ")" << endl;
+			cout << "\tIndex: 0x" << blockAddr << " (" << size << " bytes)" << endl;
 			blockAddr = (int*) *(blockAddr + 1);
-		} while (blockAddr != freelist);
+		} while (blockAddr != freelist && blockAddr != NULL);
 	}
 	cout << endl;
 }
