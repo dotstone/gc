@@ -233,12 +233,17 @@ void Heap::dump() {
 	cout << "Used blocks: " << endl;
 	int* blockAddr = (int*) heap;
 	void* startFreeList;
-	int totalSize;
+	int blockSize;
+	int totalSize = 0;
+	int totalUsed = 0;
 	// Iterate over all blocks, filter used blocks
-	for (int* blockAddr = (int*)heap; (int)blockAddr < (int)heap + 32 * 1024; blockAddr += totalSize / 4) {
-		totalSize = sizeOfBlock(blockAddr);
-		int size = totalSize - 8;
+	for (int* blockAddr = (int*)heap; (int)blockAddr < (int)heap + 32 * 1024; blockAddr += blockSize / 4) {
+		blockSize = sizeOfBlock(blockAddr);
+		int size = blockSize - 8;
 		if (isUsed(blockAddr)) {
+			totalSize += blockSize;
+			totalUsed++;
+
 			int* descriptor = tag2Address(tag(blockAddr));
 			string type = "Type not found";
 			for (auto iter : typeDescriptors) {
@@ -259,7 +264,9 @@ void Heap::dump() {
 		}
 	}
 
-	cout << endl << endl << "Free blocks: " << endl;
+	cout << endl << totalUsed << " objects use " << totalSize << " bytes in heap" << endl << endl;
+
+	cout << "Free blocks: " << endl;
 	// Iterate over freelist
 	if (freelist == NULL) {
 		cout << "No free blocks!";
